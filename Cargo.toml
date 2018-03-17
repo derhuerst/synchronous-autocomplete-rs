@@ -1,0 +1,16 @@
+[package]
+name = "synchronous_autocomplete"
+version = "0.1.0"
+authors = ["Jannis R <mail@jannisr.de>"]
+repository = "https://github.com/derhuerst/synchronous-autocomplete-rs.git"
+homepage = "https://github.com/derhuerst/synchronous-autocomplete-rs"
+license = "ISC"
+readme = "README.md"
+description = "Simple, synchronous autocompletion."
+keywords = ["autocomplete, autocompletion, search"]
+exclude = [".travis.yml"]
+
+[dependencies]
+
+[badges]
+travis-ci = { repository = "derhuerst/synchronous-autocomplete-rs" }
