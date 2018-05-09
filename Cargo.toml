@@ -11,6 +11,7 @@ keywords = ["autocomplete, autocompletion, search"]
 exclude = [".travis.yml"]
 
 [dependencies]
+slugify = "0.1.0"
 
 [badges]
 travis-ci = { repository = "derhuerst/synchronous-autocomplete-rs" }
