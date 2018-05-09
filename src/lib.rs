@@ -1,5 +1,7 @@
 #[macro_use] extern crate slugify;
+extern crate levenshtein;
 use slugify::slugify;
+use levenshtein::levenshtein;
 use std::collections::HashMap;
 
 pub struct Index {
@@ -49,5 +51,53 @@ pub fn build_index(items: Vec<Item>) -> Index {
 		index.scores.insert(token.to_string(), score);
 	}
 
+	println!("{:?}", index);
 	index
+}
+
+fn by_fragment(idx: &Index, fragment: String, completion: bool, fuzzy: bool) -> HashMap<i32, f64> {
+	let mut results = HashMap::new();
+	let l = fragment.len();
+
+	if idx.tokens.contains_key(&fragment) {
+		let relevance = 1.0
+			+ idx.scores.get(&fragment).expect("invalid index")
+			+ (l as f64).sqrt();
+
+		let ids = idx.tokens.get(&fragment).expect("invalid index");
+		for &id in ids.iter() {
+			let mut total_relevance = results.entry(id).or_insert(0.0);
+			*total_relevance += relevance;
+		}
+	}
+
+	if completion || fuzzy {
+		for token in idx.tokens.keys() {
+			if *token == fragment { continue; }
+			let mut relevance;
+
+			let token_length = token.len();
+			let token_slice: String = token.chars().take(l).collect();
+			if completion && token_length > l && fragment == token_slice {
+				relevance = 1.0 // add-one smoothing
+					+ idx.scores.get(token).expect("invalid index")
+					+ l as f64 / token_length as f64;
+			} else if fuzzy {
+				let distance = levenshtein(&fragment, token);
+				if distance > 3 { continue; }
+				relevance = ( // add-one smoothing
+					(1.0 + idx.scores.get(token).expect("invalid index"))
+					/ (1.0 + distance as f64)
+				);
+			} else { continue; }
+
+			let ids = idx.tokens.get(token).expect("invalid index");
+			for &id in ids.iter() {
+				let mut total_relevance = results.entry(id).or_insert(0.0);
+				*total_relevance += relevance;
+			}
+		}
+	}
+
+	results
 }
