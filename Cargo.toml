@@ -12,6 +12,8 @@ exclude = [".travis.yml"]
 
 [dependencies]
 slugify = "0.1.0"
+levenshtein = "1.0.3"
+float-ord = "0.2.0"
 
 [badges]
 travis-ci = { repository = "derhuerst/synchronous-autocomplete-rs" }

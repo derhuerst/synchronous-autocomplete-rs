@@ -1,7 +1,9 @@
 #[macro_use] extern crate slugify;
 extern crate levenshtein;
+extern crate float_ord;
 use slugify::slugify;
 use levenshtein::levenshtein;
+use float_ord::FloatOrd;
 use std::collections::HashMap;
 
 pub struct Index {
@@ -16,6 +18,13 @@ pub struct Item {
 	pub id: String,
 	pub name: String,
 	pub weight: f64
+}
+
+pub struct Result {
+	pub id: String,
+	pub weight: f64,
+	pub relevance: f64,
+	pub score: f64
 }
 
 pub fn build_index(items: Vec<Item>) -> Index {
@@ -100,4 +109,55 @@ fn by_fragment(idx: &Index, fragment: String, completion: bool, fuzzy: bool) -> 
 	}
 
 	results
+}
+
+pub fn run(idx: &Index, query: String, completion: bool, fuzzy: bool) -> Vec<Result> {
+	if query == "" {
+		return vec![];
+	}
+
+	let mut results = HashMap::new();
+	let fragments = slugify!(&query, separator = " ");
+	let fragments = fragments.split_whitespace();
+
+	for fragment in fragments {
+		let ids = with_fragment(idx, fragment.to_string(), completion, fuzzy);
+		for (id, relevance) in ids {
+			// todo: exclude items that don't match all fragments
+			let nr_of_tokens = idx.nr_of_tokens.get(id as usize).expect("invalid index");
+			let mut total_relevance = results
+				.entry(id)
+				.or_insert(1.0 / *nr_of_tokens as f64);
+			*total_relevance *= relevance;
+		}
+	}
+
+	// todo: nr of results param
+	let mut scores: Vec<f64> = Vec::with_capacity(3);
+	let mut items: Vec<Result> = Vec::with_capacity(3);
+	for (id, relevance) in results {
+		let weight = idx.weights.get(id as usize).expect("invalid index");
+		let score = relevance * weight;
+
+		// todo: most likely, this can be done more elegantly
+		let score_f = FloatOrd(score);
+		let pos = scores
+			.binary_search_by(|s| score_f.cmp(&FloatOrd(*s)))
+			.unwrap_or_else(|e| e);
+		if pos >= 3 { continue; } // score too low
+		// todo: most likely, this can be done faster than insert & truncate
+		scores.insert(pos, score);
+		scores.truncate(3);
+
+		let original_id = idx.original_ids.get(id as usize).expect("invalid index");
+		items.insert(pos, Result {
+			id: original_id.to_string(),
+			weight: *weight,
+			relevance,
+			score
+		});
+		items.truncate(3);
+	}
+
+	items
 }
