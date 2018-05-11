@@ -20,8 +20,37 @@ synchronous_autocomplete = "0.1.0"
 
 ## Usage
 
+Check the [full guide over at `synchronous-autocomplete`](https://github.com/derhuerst/synchronous-autocomplete/blob/0b02a4ab52ccb5ce4ad50b274711f571bb65ae9d/readme.md#usage), the JS equivalent.
+
 ```rust
-// todo
+extern crate synchronous_autocomplete;
+use synchronous_autocomplete::{Item, build_index, run};
+
+fn main() {
+	let items = vec![
+		Item {
+			id: String::from("apple"),
+			name: String::from("Juicy sour Apple."),
+			weight: 3.0
+		},
+		Item {
+			id: String::from("banana"),
+			name: String::from("Sweet juicy Banana!"),
+			weight: 2.0
+		},
+		Item {
+			id: String::from("pomegranate"),
+			name: String::from("Sour Pomegranate"),
+			weight: 5.0
+		}
+	];
+
+	let idx = build_index(items);
+
+	println!("normal {:?}", run(&idx, String::from("sour"), false, false));
+	println!("completion {:?}", run(&idx, String::from("bana"), true, false));
+	println!("fuzzy {:?}", run(&idx, String::from("aplle"), false, true));
+}
 ```
 
 
