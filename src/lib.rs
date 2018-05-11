@@ -6,20 +6,23 @@ use levenshtein::levenshtein;
 use float_ord::FloatOrd;
 use std::collections::HashMap;
 
+#[derive(Debug)]
 pub struct Index {
 	pub tokens: HashMap<String, Vec<i32>>,
 	pub scores: HashMap<String, f64>,
 	pub weights: Vec<f64>,
-	pub nr_of_tokens: Vec<i32>,
+	pub nr_of_tokens: Vec<i8>,
 	pub original_ids: Vec<String>
 }
 
+#[derive(Debug)]
 pub struct Item {
 	pub id: String,
 	pub name: String,
 	pub weight: f64
 }
 
+#[derive(Debug)]
 pub struct Result {
 	pub id: String,
 	pub weight: f64,
@@ -46,7 +49,7 @@ pub fn build_index(items: Vec<Item>) -> Index {
 			let mut ids = index.tokens
 				.entry(token.to_string())
 				.or_insert(vec![]);
-			ids.push(id); // todo: check if added
+			ids.push(id);
 			nr_of_tokens += 1;
 		}
 		index.weights.push(item.weight);
@@ -60,11 +63,10 @@ pub fn build_index(items: Vec<Item>) -> Index {
 		index.scores.insert(token.to_string(), score);
 	}
 
-	println!("{:?}", index);
 	index
 }
 
-fn by_fragment(idx: &Index, fragment: String, completion: bool, fuzzy: bool) -> HashMap<i32, f64> {
+fn with_fragment(idx: &Index, fragment: String, completion: bool, fuzzy: bool) -> HashMap<i32, f64> {
 	let mut results = HashMap::new();
 	let l = fragment.len();
 
@@ -94,10 +96,9 @@ fn by_fragment(idx: &Index, fragment: String, completion: bool, fuzzy: bool) -> 
 			} else if fuzzy {
 				let distance = levenshtein(&fragment, token);
 				if distance > 3 { continue; }
-				relevance = ( // add-one smoothing
+				relevance = // add-one smoothing
 					(1.0 + idx.scores.get(token).expect("invalid index"))
-					/ (1.0 + distance as f64)
-				);
+					/ (1.0 + distance as f64);
 			} else { continue; }
 
 			let ids = idx.tokens.get(token).expect("invalid index");
@@ -137,7 +138,7 @@ pub fn run(idx: &Index, query: String, completion: bool, fuzzy: bool) -> Vec<Res
 	let mut items: Vec<Result> = Vec::with_capacity(3);
 	for (id, relevance) in results {
 		let weight = idx.weights.get(id as usize).expect("invalid index");
-		let score = relevance * weight;
+		let score = relevance * weight.powf(1.0 / 3.0);
 
 		// todo: most likely, this can be done more elegantly
 		let score_f = FloatOrd(score);

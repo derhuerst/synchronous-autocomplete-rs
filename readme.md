@@ -14,7 +14,7 @@
 Put this into your `Cargo.toml`:
 
 ```toml
-synchronous_autocomplete-rs = "0.1.0"
+synchronous_autocomplete = "0.1.0"
 ```
 
 
